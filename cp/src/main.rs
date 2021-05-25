@@ -57,7 +57,7 @@ fn main() -> Result<()> {
             }
         }
     }
-
+    buf_writer.flush();
     //Nothing to do here, all good
     Ok(())
 }
