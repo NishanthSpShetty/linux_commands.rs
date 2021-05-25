@@ -1,7 +1,9 @@
-use std::fs;
-use std::fs::File;
-use std::io::prelude::*;
+use std::io::{prelude::*, BufWriter};
 use std::path::PathBuf;
+use std::{
+    fs::File,
+    io::{BufReader, Result},
+};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -13,18 +15,49 @@ struct Param {
     outfile: PathBuf,
 }
 
-fn main() {
+fn main() -> Result<()> {
     let params = Param::from_args();
-    let res = fs::read_to_string(params.infile.clone());
 
-    let data = res.expect("failed to read input file");
-    let mut file = match File::create(params.outfile) {
-        Err(e) => panic!("Could not create oiutput file {}", e),
-        Ok(file) => file,
-    };
+    //TODO:
+    // Handle when input and output path are same
+    // When given path is directory
+    let input_file = File::open(params.infile)?;
+    let output_file = File::create(params.outfile)?;
+    //create a buffered reader for the input file
+    let mut buf_reader = BufReader::new(input_file);
+    let mut buf_writer = BufWriter::with_capacity(1024, output_file);
 
-    match file.write_all(data.as_bytes()) {
-        Ok(()) => println!(" done"),
-        Err(e) => println!("{}", e),
+    let mut buf: [u8; 1024] = [0; 1024];
+
+    loop {
+        match buf_reader.read(&mut buf) {
+            Ok(n) => {
+                if n == 0 {
+                    break;
+                }
+
+                match buf_writer.write(&buf) {
+                    Ok(written) => {
+                        //FIXME: "should handle by writing in loop");
+                        if n != written {
+                            panic!(
+                                "unable to write the read content to ne file Read {}bytes, Written {}bytes",
+                                n, written
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        panic!("Failed to write with an error: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                println!("Error reading file {}", e);
+                break;
+            }
+        }
     }
+
+    //Nothing to do here, all good
+    Ok(())
 }
