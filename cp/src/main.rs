@@ -37,7 +37,7 @@ fn main() -> Result<()> {
                 if n == 0 {
                     break;
                 }
-
+                //Write all content read from the file in the following writer loop
                 'writer: loop {
                     let mut finished = 0;
                     match buf_writer.write(&buf[finished..n]) {
