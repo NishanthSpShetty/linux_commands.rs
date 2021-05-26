@@ -15,6 +15,8 @@ struct Param {
     outfile: PathBuf,
 }
 
+const BUFF_SIZE: usize = 1024 * 8; // 8kb, can perform faster copy for large files
+
 fn main() -> Result<()> {
     let params = Param::from_args();
 
@@ -25,9 +27,9 @@ fn main() -> Result<()> {
     let output_file = File::create(params.outfile)?;
     //create a buffered reader for the input file
     let mut buf_reader = BufReader::new(input_file);
-    let mut buf_writer = BufWriter::with_capacity(1024, output_file);
+    let mut buf_writer = BufWriter::with_capacity(BUFF_SIZE, output_file);
 
-    let mut buf: [u8; 1024] = [0; 1024];
+    let mut buf = [0; BUFF_SIZE];
 
     loop {
         match buf_reader.read(&mut buf) {
@@ -36,18 +38,18 @@ fn main() -> Result<()> {
                     break;
                 }
 
-                match buf_writer.write(&buf) {
-                    Ok(written) => {
-                        //FIXME: "should handle by writing in loop");
-                        if n != written {
-                            panic!(
-                                "unable to write the read content to ne file Read {}bytes, Written {}bytes",
-                                n, written
-                            );
+                'writer: loop {
+                    let mut finished = 0;
+                    match buf_writer.write(&buf[finished..n]) {
+                        Ok(written) => {
+                            finished = finished + written;
+                            if finished == written {
+                                break 'writer;
+                            }
                         }
-                    }
-                    Err(e) => {
-                        panic!("Failed to write with an error: {}", e);
+                        Err(e) => {
+                            panic!("Failed to write with an error: {}", e);
+                        }
                     }
                 }
             }
@@ -57,7 +59,6 @@ fn main() -> Result<()> {
             }
         }
     }
-    buf_writer.flush();
-    //Nothing to do here, all good
-    Ok(())
+    //let the main throw the error
+    buf_writer.flush()
 }
