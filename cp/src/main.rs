@@ -2,7 +2,7 @@ use std::io::{prelude::*, BufWriter};
 use std::path::PathBuf;
 use std::{
     fs::File,
-    io::{BufReader, Result},
+    io::{BufReader, Error, ErrorKind, Result},
 };
 use structopt::StructOpt;
 
@@ -20,11 +20,19 @@ const BUFF_SIZE: usize = 1024 * 8; // 8kb, can perform faster copy for large fil
 fn main() -> Result<()> {
     let params = Param::from_args();
 
+    // 1. Handle when input and output path are same
+    if params.infile == params.outfile {
+        return Err(Error::new(
+            ErrorKind::Other,
+            "source and target path are same.",
+        ));
+    }
+
     //TODO:
-    // Handle when input and output path are same
-    // When given path is directory
+    // 2. When given path is directory
     let input_file = File::open(params.infile)?;
     let output_file = File::create(params.outfile)?;
+
     //create a buffered reader for the input file
     let mut buf_reader = BufReader::new(input_file);
     let mut buf_writer = BufWriter::with_capacity(BUFF_SIZE, output_file);
