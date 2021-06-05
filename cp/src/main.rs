@@ -17,10 +17,6 @@ struct Param {
 
 const BUFF_SIZE: usize = 1024 * 8; // 8kb, can perform faster copy for large files
 
-fn target_is_dir(path: &PathBuf) -> bool {
-    !path.is_file()
-}
-
 fn main() -> Result<()> {
     let params = Param::from_args();
 
@@ -35,18 +31,21 @@ fn main() -> Result<()> {
     //TODO:
     //2. When given source path is directory
     let in_path = params.infile.as_path();
-    let input_file = File::open(in_path)?;
+    let input_file = File::open(in_path).expect("failed to open source file");
     // 3. When given target path is directory
     let output_file: File;
-    if target_is_dir(&params.outfile) {
+
+    //is_dir will return true if path is a directory
+    if !params.outfile.is_dir() {
+        output_file = File::create(params.outfile).expect("failed to create output file");
+    } else {
         //we need to create target file inside the given target path
         let mut output_path = PathBuf::new();
         output_path.push(params.outfile.as_path());
         output_path.push(in_path);
 
-        output_file = File::create(output_path)?;
-    } else {
-        output_file = File::create(params.outfile)?;
+        println!("{:?}", output_path);
+        output_file = File::create(output_path).expect("filed to creat output file");
     }
 
     //create a buffered reader for the input file
